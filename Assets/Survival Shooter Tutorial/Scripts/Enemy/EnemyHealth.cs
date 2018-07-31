@@ -32,10 +32,10 @@ public class EnemyHealth : MonoBehaviour
         }
     }
 
-    public void TakeDamage (int amount, Vector3 hitPoint)
+    public bool TakeDamage (int amount, Vector3 hitPoint)
     {
         if (isDead) {
-            return;
+            return false;
         }
 
         enemyAudio.Play ();
@@ -48,6 +48,8 @@ public class EnemyHealth : MonoBehaviour
         if (currentHealth <= 0) {
             Death ();
         }
+
+        return true;
     }
 
     void Death ()

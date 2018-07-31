@@ -5,6 +5,8 @@ public class PlayerShooting : MonoBehaviour
     public int damagePerShot = 20;
     public float timeBetweenBullets = 0.15f;
     public float range = 100f;
+    public bool targetAcquired = false;
+    public GameObject target;
 
     float timer;
     Ray shootRay;
@@ -15,6 +17,7 @@ public class PlayerShooting : MonoBehaviour
     AudioSource gunAudio;
     Light gunLight;
     float effectsDisplayTime = 0.2f;
+    PlayerMovement playerMovement;
 
     void Awake ()
     {
@@ -23,19 +26,29 @@ public class PlayerShooting : MonoBehaviour
         gunLine = GetComponent <LineRenderer> ();
         gunAudio = GetComponent<AudioSource> ();
         gunLight = GetComponent<Light> ();
+        playerMovement = GetComponentInParent <PlayerMovement> ();
     }
 
     void Update ()
     {
         timer += Time.deltaTime;
 
-        if (Input.GetButton ("Fire1") && timer >= timeBetweenBullets) {
+        if (!playerMovement.walking && target == null) {
+            AcquireTarget();
+        }
+        
+        if ((target!=null || Input.GetButton ("Fire1")) && timer >= timeBetweenBullets) {
+            Debug.Log(target);
             Shoot ();
         }
 
         if (timer >= timeBetweenBullets * effectsDisplayTime) {
             DisableEffects ();
         }
+    }
+
+    void AcquireTarget() {
+
     }
 
     public void DisableEffects ()
@@ -65,6 +78,9 @@ public class PlayerShooting : MonoBehaviour
             EnemyHealth enemyHealth = shootHit.collider.GetComponent <EnemyHealth> ();
             if (enemyHealth != null) {
                 enemyHealth.TakeDamage (damagePerShot, shootHit.point);
+                target = shootHit.collider.gameObject;
+            } else {
+                target = null;
             }
             gunLine.SetPosition (1, shootHit.point);
         } else {
