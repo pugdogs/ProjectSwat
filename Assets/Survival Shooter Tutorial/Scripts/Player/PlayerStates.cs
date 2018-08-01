@@ -1,15 +1,9 @@
-public enum PlayerCommands {
-    // player pressed 'a'
-    // await target of ground position
-    AttackKeypress,
+public enum PlayerStates {
+    None,
 
     // player either right-clicked on attackable target or left-clicked following 'a' keypress
     // attack targetted entity
     AttackTarget,
-
-    // player pressed 'm'
-    // await target or ground position
-    MoveKeypress,
 
     // player either right-clicked ally or neutral target or left-clicked following 'm' keypress
     // move up to target

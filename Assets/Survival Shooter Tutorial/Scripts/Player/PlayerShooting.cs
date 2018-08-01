@@ -2,12 +2,13 @@
 
 public class PlayerShooting : MonoBehaviour
 {
-    public int damagePerShot = 20;
-    public float timeBetweenBullets = 0.15f;
-    public float range = 100f;
-    public bool targetAcquired = false;
+    // public bool targetAcquired = false;
     public GameObject target;
 
+    int damagePerShot = 100;
+    float timeBetweenBullets = 1f;
+    float targetRange = 12f;
+    float shootRange = 10f;
     float timer;
     Ray shootRay;
     RaycastHit shootHit;
@@ -18,6 +19,8 @@ public class PlayerShooting : MonoBehaviour
     Light gunLight;
     float effectsDisplayTime = 0.2f;
     PlayerMovement playerMovement;
+    PlayerControls playerControls;
+    PlayerStates previousPlayerState = PlayerStates.None;
 
     void Awake ()
     {
@@ -27,18 +30,29 @@ public class PlayerShooting : MonoBehaviour
         gunAudio = GetComponent<AudioSource> ();
         gunLight = GetComponent<Light> ();
         playerMovement = GetComponentInParent <PlayerMovement> ();
+        playerControls = GetComponentInParent <PlayerControls> ();
     }
 
     void Update ()
     {
         timer += Time.deltaTime;
 
-        if (!playerMovement.walking && target == null) {
-            AcquireTarget();
+        bool isDead = false;
+        if (target != null) {
+            isDead = target.GetComponent <EnemyHealth> ().currentHealth <= 0;
+        }
+
+        if (!playerMovement.walking && target == null || isDead) {
+            if (AcquireTarget() && playerControls.getState() != PlayerStates.AttackTarget) {
+                previousPlayerState = playerControls.getState();
+                playerControls.setState(PlayerStates.AttackTarget);
+            } else if(previousPlayerState != PlayerStates.None && playerControls.getState() == PlayerStates.AttackTarget) {
+                playerControls.setState(previousPlayerState);
+                previousPlayerState = PlayerStates.None;
+            }
         }
         
-        if ((target!=null || Input.GetButton ("Fire1")) && timer >= timeBetweenBullets) {
-            Debug.Log(target);
+        if (target != null && (target.GetComponent<EnemyHealth>()).currentHealth > 0 && timer >= timeBetweenBullets && !playerMovement.walking) {
             Shoot ();
         }
 
@@ -47,8 +61,28 @@ public class PlayerShooting : MonoBehaviour
         }
     }
 
-    void AcquireTarget() {
+    bool AcquireTarget() {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        GameObject closestEnemy = null;
+        bool targetWithinRange = false;
+        foreach (GameObject enemy in enemies) {
+            bool isDead = enemy.GetComponent <EnemyHealth> ().currentHealth <= 0;
+            if (!isDead) {
+                closestEnemy = closestEnemy ?? enemy;
+                float distance = Vector3.Distance(enemy.transform.position, transform.position);
+                if (distance < shootRange - 1f && distance < Vector3.Distance(closestEnemy.transform.position, transform.position)) {
+                    closestEnemy = enemy;
+                    targetWithinRange = true;
+                }
+            }
+        }
+        if (targetWithinRange) {
+            target = closestEnemy;
+        } else {
+            target = null;
+        }
 
+        return targetWithinRange;
     }
 
     public void DisableEffects ()
@@ -72,19 +106,18 @@ public class PlayerShooting : MonoBehaviour
         gunLine.SetPosition (0, transform.position);
 
         shootRay.origin = transform.position;
-        shootRay.direction = transform.forward;
+        shootRay.direction = target.transform.position - transform.position;
 
-        if (Physics.Raycast (shootRay, out shootHit, range, shootableMask)) {
+        if (Physics.Raycast (shootRay, out shootHit, shootRange, shootableMask)) {
             EnemyHealth enemyHealth = shootHit.collider.GetComponent <EnemyHealth> ();
             if (enemyHealth != null) {
                 enemyHealth.TakeDamage (damagePerShot, shootHit.point);
-                target = shootHit.collider.gameObject;
             } else {
                 target = null;
             }
             gunLine.SetPosition (1, shootHit.point);
         } else {
-            gunLine.SetPosition (1, shootRay.origin + shootRay.direction * range);
+            gunLine.SetPosition (1, shootRay.origin + shootRay.direction * shootRange);
         }
     }
 }

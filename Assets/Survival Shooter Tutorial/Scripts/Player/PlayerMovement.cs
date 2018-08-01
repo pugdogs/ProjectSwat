@@ -12,6 +12,36 @@ public class PlayerMovement : MonoBehaviour
     float camRayLength = 100f;
     Vector3 lastFloorHitPoint;
     PlayerShooting playerShooting;
+    PlayerControls playerControls;
+
+    public KeySequence attackMoveSequence;
+
+	// An array of KeyCode to demonstrate different ways of
+	// setting up [myKeySequence].
+	KeyCode[] attackMoveKeyCodes = new KeyCode[ 2 ] {
+		KeyCode.A, KeyCode.Mouse0
+	};
+
+	void Start () {
+		// Here's way to initialize [myKeySequence] without defined sequence.
+		attackMoveSequence = new KeySequence();
+
+		// Set the sequence of [myKeySequence] by copying
+		// [myKeyCodes] to [myKeySequence.sequence].
+		attackMoveSequence.sequence = new KeyCode[ attackMoveKeyCodes.Length ];
+		attackMoveKeyCodes.CopyTo( attackMoveSequence.sequence, 0 );
+
+		// Here is another way to initialize [myKeySequence].
+		attackMoveSequence = new KeySequence(
+			new KeyCode[] {
+				KeyCode.A,
+				KeyCode.Mouse0 }
+		);
+
+		// Here's another way to initialize [myKeySequence].
+		attackMoveSequence = new KeySequence( attackMoveKeyCodes );
+	}
+
 
     void Awake ()
     {
@@ -19,17 +49,31 @@ public class PlayerMovement : MonoBehaviour
         anim = GetComponent<Animator> ();
         playerRigidbody = GetComponent<Rigidbody> ();
         playerShooting = GetComponentInChildren <PlayerShooting> ();
+        playerControls = GetComponentInChildren<PlayerControls>();
     }
 
     void FixedUpdate ()
     {
-        if (Input.GetButton ("Fire2")) {
+		// if( attackMoveSequence.Check() ) {
+        //     Vector3 inputMousePosition = Input.mousePosition;
+        //     Ray camRay = Camera.main.ScreenPointToRay (inputMousePosition);
+        //     RaycastHit floorHit;
+        //     if (Physics.Raycast (camRay, out floorHit, camRayLength, floorMask)) {
+        //         playerControls.setState(PlayerStates.AttackMove);
+        //         lastFloorHitPoint = floorHit.point;
+        //     }
+        // } else 
+        if (Input.GetButtonDown ("Fire2")) {
             Vector3 inputMousePosition = Input.mousePosition;
             Ray camRay = Camera.main.ScreenPointToRay (inputMousePosition);
             RaycastHit floorHit;
             if (Physics.Raycast (camRay, out floorHit, camRayLength, floorMask)) {
+                playerControls.setState(PlayerStates.Move);
                 lastFloorHitPoint = floorHit.point;
             }
+        } else if (Input.GetButtonDown("H")) {
+            playerControls.setState(PlayerStates.HoldPosition);
+            lastFloorHitPoint = transform.position;
         }
 
         float h = 0f;
@@ -51,11 +95,12 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        if (playerShooting.target != null) {
+        if (playerShooting.target != null && !walking) {
             Vector3 shootPos = playerShooting.target.transform.position - transform.position;
             shootPos.y = 0;
             Turning(shootPos);
         }
+
         Animating (walking);
     }
 
@@ -77,5 +122,8 @@ public class PlayerMovement : MonoBehaviour
     void Animating (bool walking)
     {
         anim.SetBool ("IsWalking", walking);
+        if (!walking && playerControls.getState() == PlayerStates.Move) {
+            playerControls.setState(PlayerStates.HoldPosition);
+        }
     }
 }
